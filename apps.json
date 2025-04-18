@@ -1,0 +1,31 @@
+{
+  "applications": [
+    {
+      "appName": "app1",
+      "testUrl": "/search",
+      "servers": [
+        "server1",
+        "server2",
+        "server3"
+      ]
+    },
+    {
+      "appName": "app2",
+      "testUrl": "/properties",
+      "servers": [
+        "server1",
+        "server2",
+        "server3"
+      ]
+    },
+    {
+      "appName": "app3",
+      "testUrl": "/configs",
+      "servers": [
+        "server1",
+        "server2",
+        "server3"
+      ]
+    }
+  ]
+}
