@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"resource-monitor/config"
 	"resource-monitor/types"
 	"sync"
 	"time"
@@ -26,7 +27,6 @@ func main() {
 		fmt.Printf("Error opening file: %v", err)
 		os.Exit(1)
 	}
-	fmt.Println("Application configuration accessed..")
 
 	defer func(f *os.File) {
 		err := f.Close()
@@ -47,6 +47,7 @@ func main() {
 	// Set up HTTP routes
 	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/dashboard", handleDashboard)
+	http.HandleFunc("/timestamp", handleTimestamp)
 	http.HandleFunc("/style.css", handleCSS)
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
@@ -67,6 +68,19 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	defer status.Mu.RUnlock()
 
 	err := templates.ExecuteTemplate(w, "dashboard.html", status)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func handleTimestamp(w http.ResponseWriter, r *http.Request) {
+	status.Mu.RLock()
+	defer status.Mu.RUnlock()
+
+	// Create a template for just the timestamp
+	tmpl := template.Must(template.New("timestamp").Parse("{{.Format \"Jan 02, 2006 15:04:05\"}}"))
+
+	err := tmpl.Execute(w, status.LastUpdate)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -111,10 +125,11 @@ func pingServers(apps []types.Application, dryRun bool) ([]types.Application, er
 
 // startStatusChecker runs the pingServers function in a goroutine
 func startStatusChecker(apps []types.Application, interval time.Duration) {
+	isDryRun := config.GetDryRunConfig()
 	go func() {
 		for {
 			updateLock.Lock()
-			updatedApps, _ := pingServers(apps, true)
+			updatedApps, _ := pingServers(apps, isDryRun)
 
 			status.Mu.Lock()
 			status.Apps = updatedApps
