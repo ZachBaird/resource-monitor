@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application Status Dashboard</title>
+    <link rel="stylesheet" href="/style.css">
+    <!-- Include HTMX for dynamic updates -->
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>Application Status Dashboard</h1>
+        <p class="last-updated">Last updated:
+            <span id="last-updated-time">{{.LastUpdate.Format "Jan 02, 2006 15:04:05"}}</span>
+        </p>
+    </header>
+
+    <!-- This div will be automatically updated by HTMX -->
+    <div
+            class="dashboard"
+            id="app-dashboard"
+            hx-get="/dashboard"
+            hx-trigger="every 30s"
+            hx-swap="innerHTML"
+    >
+        {{template "dashboard.html" .}}
+    </div>
+</div>
+</body>
+</html>

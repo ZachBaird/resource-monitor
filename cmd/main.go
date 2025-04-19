@@ -3,14 +3,21 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"io"
 	"log"
 	"math/rand"
 	"net/http"
 	"os"
-	"path/filepath"
 	"resource-monitor/types"
+	"sync"
 	"time"
+)
+
+var (
+	status     = &types.AppStatus{LastUpdate: time.Now()}
+	templates  = template.Must(template.ParseFiles("templates/index.html", "templates/dashboard.html"))
+	updateLock = sync.Mutex{}
 )
 
 func main() {
@@ -34,27 +41,40 @@ func main() {
 		os.Exit(1)
 	}
 
-	http.HandleFunc("/", servePage("index.html"))
-	//err = http.ListenAndServe(":8080", nil)
+	status.Apps = apps
+	startStatusChecker(apps, 30*time.Second)
+
+	// Set up HTTP routes
+	http.HandleFunc("/", handleIndex)
+	http.HandleFunc("/dashboard", handleDashboard)
+	http.HandleFunc("/style.css", handleCSS)
+
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func handleIndex(w http.ResponseWriter, r *http.Request) {
+	status.Mu.RLock()
+	defer status.Mu.RUnlock()
+
+	err := templates.ExecuteTemplate(w, "index.html", status)
 	if err != nil {
-		log.Fatal(err)
-	}
-
-	for {
-		results, _ := pingServers(apps, true)
-		for _, r := range results {
-			fmt.Printf("%v\n", r)
-		}
-
-		fmt.Printf("\n\n\n")
-		time.Sleep(5 * time.Second)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-func servePage(filename string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, filepath.Join("html", filename))
+func handleDashboard(w http.ResponseWriter, r *http.Request) {
+	status.Mu.RLock()
+	defer status.Mu.RUnlock()
+
+	err := templates.ExecuteTemplate(w, "dashboard.html", status)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func handleCSS(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/css")
+	http.ServeFile(w, r, "./static/style.css")
 }
 
 func parseJsonFile(f *os.File) ([]types.Application, error) {
@@ -69,29 +89,41 @@ func parseJsonFile(f *os.File) ([]types.Application, error) {
 	return apps.Applications, nil
 }
 
-func pingServers(apps []types.Application, dryRun bool) ([]string, error) {
-	results := make([]string, 0)
+func pingServers(apps []types.Application, dryRun bool) ([]types.Application, error) {
+	var results []types.Application
 	for _, app := range apps {
+		app.Status = make(map[string]bool)
 		for _, server := range app.Servers {
 			if dryRun {
-				random := rand.Intn(2) + 1
-				if random%2 == 0 {
-					results = append(results, fmt.Sprintf("%s: %s is down", app.Name, server))
-				}
+				app.Status[server] = (rand.Intn(2)+1)%2 == 0
+			} else {
+				reqUrl := fmt.Sprintf("%s/%s", server, app.TestUrl)
+				req, err := http.Get(reqUrl)
 
-				results = append(results, fmt.Sprintf("%s: %s", app.Name, server))
-				continue
+				app.Status[server] = !(err != nil && req.StatusCode != http.StatusOK)
 			}
-
-			reqUrl := fmt.Sprintf("%s/%s", server, app.TestUrl)
-			req, err := http.Get(reqUrl)
-			if err != nil || req.StatusCode != http.StatusOK {
-				results = append(results, fmt.Sprintf("%s: %s is down", app.Name, server))
-			}
-
-			results = append(results, fmt.Sprintf("%s: %s", app.Name, server))
 		}
+		results = append(results, app)
 	}
 
 	return results, nil
+}
+
+// startStatusChecker runs the pingServers function in a goroutine
+func startStatusChecker(apps []types.Application, interval time.Duration) {
+	go func() {
+		for {
+			updateLock.Lock()
+			updatedApps, _ := pingServers(apps, true)
+
+			status.Mu.Lock()
+			status.Apps = updatedApps
+			status.LastUpdate = time.Now()
+			status.Mu.Unlock()
+
+			updateLock.Unlock()
+
+			time.Sleep(interval)
+		}
+	}()
 }

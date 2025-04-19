@@ -1,0 +1,18 @@
+{{range .Apps}}
+{{ $app := . }}
+<div class="app-card" data-url="{{$app.TestUrl}}">
+    <div class="tooltip">Pinging endpoint: {{$app.TestUrl}}</div>
+    <div class="app-name">{{$app.Name}}</div>
+    <ul class="servers-list">
+        {{range $app.Servers}}
+        <li class="server-item" data-url="{{$app.TestUrl}}">
+            <span class="server-name">{{.}}</span>
+            <span class="status-text {{if index $app.Status .}}active-text{{else}}inactive-text{{end}}">
+                    <span class="status-indicator {{if index $app.Status .}}status-active{{else}}status-inactive{{end}}"></span>
+                    {{if index $app.Status .}}Active{{else}}Inactive{{end}}
+                </span>
+        </li>
+        {{end}}
+    </ul>
+</div>
+{{end}}
