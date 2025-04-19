@@ -11,6 +11,7 @@ import (
 	"os"
 	"resource-monitor/config"
 	"resource-monitor/types"
+	"resource-monitor/utils"
 	"sync"
 	"time"
 )
@@ -57,29 +58,22 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	status.Mu.RLock()
 	defer status.Mu.RUnlock()
 
-	err := templates.ExecuteTemplate(w, "index.html", status)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	utils.ServeTemplateFile("index.html", w, status, templates)
 }
 
 func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	status.Mu.RLock()
 	defer status.Mu.RUnlock()
 
-	err := templates.ExecuteTemplate(w, "dashboard.html", status)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	utils.ServeTemplateFile("dashboard.html", w, status, templates)
 }
 
 func handleTimestamp(w http.ResponseWriter, r *http.Request) {
 	status.Mu.RLock()
 	defer status.Mu.RUnlock()
 
-	// Create a template for just the timestamp
+	// timestamp template
 	tmpl := template.Must(template.New("timestamp").Parse("{{.Format \"Jan 02, 2006 15:04:05\"}}"))
-
 	err := tmpl.Execute(w, status.LastUpdate)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -103,24 +97,34 @@ func parseJsonFile(f *os.File) ([]types.Application, error) {
 	return apps.Applications, nil
 }
 
-func pingServers(apps []types.Application, dryRun bool) ([]types.Application, error) {
+func execDryRun(apps []types.Application) []types.Application {
 	var results []types.Application
 	for _, app := range apps {
 		app.Status = make(map[string]bool)
 		for _, server := range app.Servers {
-			if dryRun {
-				app.Status[server] = (rand.Intn(2)+1)%2 == 0
-			} else {
-				reqUrl := fmt.Sprintf("%s/%s", server, app.TestUrl)
-				req, err := http.Get(reqUrl)
-
-				app.Status[server] = !(err != nil && req.StatusCode != http.StatusOK)
-			}
+			app.Status[server] = (rand.Intn(2)+1)%2 == 0
 		}
 		results = append(results, app)
 	}
 
-	return results, nil
+	return results
+}
+
+func pingServers(apps []types.Application) []types.Application {
+	var results []types.Application
+	for _, app := range apps {
+		app.Status = make(map[string]bool)
+		for _, server := range app.Servers {
+			reqUrl := fmt.Sprintf("%s/%s", server, app.TestUrl)
+			req, err := http.Get(reqUrl)
+
+			app.Status[server] = !(err != nil && req.StatusCode != http.StatusOK)
+
+		}
+		results = append(results, app)
+	}
+
+	return results
 }
 
 // startStatusChecker runs the pingServers function in a goroutine
@@ -129,10 +133,13 @@ func startStatusChecker(apps []types.Application, interval time.Duration) {
 	go func() {
 		for {
 			updateLock.Lock()
-			updatedApps, _ := pingServers(apps, isDryRun)
-
 			status.Mu.Lock()
-			status.Apps = updatedApps
+			if isDryRun {
+				status.Apps = execDryRun(apps)
+			} else {
+				status.Apps = pingServers(apps)
+			}
+
 			status.LastUpdate = time.Now()
 			status.Mu.Unlock()
 
