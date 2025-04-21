@@ -20,6 +20,7 @@ var (
 	status     = &types.AppStatus{LastUpdate: time.Now()}
 	templates  = template.Must(template.ParseFiles("templates/index.html", "templates/dashboard.html"))
 	updateLock = sync.Mutex{}
+	httpClient = http.Client{}
 )
 
 func main() {
@@ -110,15 +111,23 @@ func execDryRun(apps []types.Application) []types.Application {
 	return results
 }
 
-func pingServers(apps []types.Application) []types.Application {
+func pingServers(apps []types.Application, secrets map[string]string) []types.Application {
 	var results []types.Application
 	for _, app := range apps {
 		app.Status = make(map[string]bool)
 		for _, server := range app.Servers {
 			reqUrl := fmt.Sprintf("%s/%s", server, app.TestUrl)
-			req, err := http.Get(reqUrl)
+			req, err := http.NewRequest(app.HttpMethod, reqUrl, nil)
+			if err != nil {
+				app.Status[server] = false
+				continue
+			}
+			if app.ApiKey != "" {
+				req.Header.Set("Authorization", app.ApiKey)
+			}
+			res, err := httpClient.Do(req)
 
-			app.Status[server] = !(err != nil && req.StatusCode != http.StatusOK)
+			app.Status[server] = !(err != nil && res.StatusCode != http.StatusOK)
 
 		}
 		results = append(results, app)
@@ -130,6 +139,11 @@ func pingServers(apps []types.Application) []types.Application {
 // startStatusChecker runs the pingServers function in a goroutine
 func startStatusChecker(apps []types.Application, interval time.Duration) {
 	isDryRun := config.GetDryRunConfig()
+	appSecrets := make(map[string]string)
+
+	for _, app := range apps {
+		appSecrets[app.Name] = config.GetSecretConfig(app.Name)
+	}
 	go func() {
 		for {
 			updateLock.Lock()
@@ -137,7 +151,7 @@ func startStatusChecker(apps []types.Application, interval time.Duration) {
 			if isDryRun {
 				status.Apps = execDryRun(apps)
 			} else {
-				status.Apps = pingServers(apps)
+				status.Apps = pingServers(apps, appSecrets)
 			}
 
 			status.LastUpdate = time.Now()

@@ -7,7 +7,9 @@
         "server1",
         "server2",
         "server3"
-      ]
+      ],
+      "httpMethod": "GET",
+      "apiKey": ""
     },
     {
       "appName": "app2",
@@ -16,7 +18,9 @@
         "server1",
         "server2",
         "server3"
-      ]
+      ],
+      "httpMethod": "GET",
+      "apiKey": ""
     },
     {
       "appName": "app3",
@@ -25,7 +29,9 @@
         "server1",
         "server2",
         "server3"
-      ]
+      ],
+      "httpMethod": "GET",
+      "apiKey": ""
     }
   ]
 }

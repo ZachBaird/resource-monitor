@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"github.com/joho/godotenv"
 	"log"
 	"os"
@@ -16,4 +17,10 @@ func GetDryRunConfig() bool {
 		log.Fatal(err)
 	}
 	return dryRun
+}
+
+func GetSecretConfig(a string) string {
+	_ = godotenv.Load()
+	env := os.Getenv(fmt.Sprintf("%s_SECRET", a))
+	return env
 }

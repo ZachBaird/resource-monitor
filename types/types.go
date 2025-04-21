@@ -9,10 +9,13 @@ type Applications struct {
 	Applications []Application `json:"applications"`
 }
 type Application struct {
-	Name    string   `json:"appName"`
-	Servers []string `json:"servers"`
-	TestUrl string   `json:"testUrl"`
-	Status  map[string]bool
+	Name       string   `json:"appName"`
+	Servers    []string `json:"servers"`
+	TestUrl    string   `json:"testUrl"`
+	HttpMethod string   `json:"httpMethod"`
+	ApiKey     string   `json:"apiKey"`
+
+	Status map[string]bool
 }
 
 type AppStatus struct {

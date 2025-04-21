@@ -18,3 +18,11 @@ ApplicationA may have health check pings, but these often determine only if the 
 This tool provides a way to test every server instance of an app with a `testUrl`. Results are displayed on a webpage.
 
 See the `apps.json` as an example.
+
+## Notes
+
+- If an ApiKey is required for the endpoint, add its secret for the app's config with the `Name` of the app prefixing it (ex. APP1_SECRET for `app1`).
+- If an ApiKey is required, make sure it's hashed and that your SECRET is added in your `.env`.
+- If the ApiKey is not hashed, the SECRET is not necessary, but I do not recommend this approach.
+- Only use GET endpoints for testing. A ping test should not mutate any data.
+- The only exception to the above is if your RESTful API has POST endpoints that receive a body in the request for read purposes.
