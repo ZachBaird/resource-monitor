@@ -9,7 +9,8 @@
         "server3"
       ],
       "httpMethod": "GET",
-      "apiKey": ""
+      "apiKey": "",
+      "header": "api-key"
     },
     {
       "appName": "app2",
@@ -20,7 +21,8 @@
         "server3"
       ],
       "httpMethod": "GET",
-      "apiKey": ""
+      "apiKey": "",
+      "header": "api-key"
     },
     {
       "appName": "app3",
@@ -31,7 +33,8 @@
         "server3"
       ],
       "httpMethod": "GET",
-      "apiKey": ""
+      "apiKey": "",
+      "header": "api-key"
     }
   ]
 }

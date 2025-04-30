@@ -23,6 +23,7 @@ See the `apps.json` as an example.
 
 - If an ApiKey is required for the endpoint, add its secret for the app's config with the `Name` of the app prefixing it (ex. APP1_SECRET for `app1`).
 - If an ApiKey is required, make sure it's hashed and that your SECRET is added in your `.env`.
+- When using an ApiKey, use the `Header` to determine what the HTTP header should be called. The default is `Authorization`, but some enterprises may want to use a custom header name (ex. `api-key`).
 - If the ApiKey is not hashed, the SECRET is not necessary, but I do not recommend this approach.
 - Only use GET endpoints for testing. A ping test should not mutate any data.
 - The only exception to the above is if your RESTful API has POST endpoints that receive a body in the request for read purposes.

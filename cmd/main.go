@@ -122,8 +122,13 @@ func pingServers(apps []types.Application, secrets map[string]string) []types.Ap
 				app.Status[server] = false
 				continue
 			}
+
 			if app.ApiKey != "" {
-				req.Header.Set("Authorization", app.ApiKey)
+				authHeader := "Authorization"
+				if app.Header != "" {
+					authHeader = app.Header
+				}
+				req.Header.Set(authHeader, app.ApiKey)
 			}
 			res, err := httpClient.Do(req)
 

@@ -14,6 +14,7 @@ type Application struct {
 	TestUrl    string   `json:"testUrl"`
 	HttpMethod string   `json:"httpMethod"`
 	ApiKey     string   `json:"apiKey"`
+	Header     string   `json:"header"`
 
 	Status map[string]bool
 }
