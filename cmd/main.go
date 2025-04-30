@@ -25,6 +25,7 @@ var (
 )
 
 func main() {
+	fmt.Println("Starting application...")
 	f, err := os.Open("./apps.json")
 	if err != nil {
 		fmt.Printf("Error opening file: %v", err)
@@ -44,8 +45,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	fmt.Println("Apps loaded...")
+
 	status.Apps = apps
 	interval := config.GetIntervalConfig()
+
+	fmt.Println("Starting monitor...\n\n")
 
 	startStatusChecker(apps, time.Duration(interval)*time.Minute)
 
@@ -56,6 +61,7 @@ func main() {
 	http.HandleFunc("/style.css", handleCSS)
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
+	fmt.Println("Server is listening on port 8080")
 }
 
 func handleIndex(w http.ResponseWriter, r *http.Request) {
@@ -118,6 +124,7 @@ func fetch(req http.Request, ch chan<- string) {
 	resp, err := httpClient.Do(&req)
 	if err != nil {
 		ch <- fmt.Sprintf("%v", false)
+		_ = fmt.Errorf(err.Error())
 		return
 	}
 	defer func(Body io.ReadCloser) {
@@ -127,6 +134,7 @@ func fetch(req http.Request, ch chan<- string) {
 		}
 	}(resp.Body)
 
+	fmt.Println(fmt.Sprintf("Result of ping on %v is %v\n", req.URL, resp.StatusCode))
 	ch <- fmt.Sprintf("%v", resp.StatusCode == http.StatusOK)
 }
 
