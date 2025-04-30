@@ -12,6 +12,7 @@ import (
 	"resource-monitor/config"
 	"resource-monitor/types"
 	"resource-monitor/utils"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -44,7 +45,9 @@ func main() {
 	}
 
 	status.Apps = apps
-	startStatusChecker(apps, 30*time.Second)
+	interval := config.GetIntervalConfig()
+
+	startStatusChecker(apps, time.Duration(interval)*time.Minute)
 
 	// Set up HTTP routes
 	http.HandleFunc("/", handleIndex)
@@ -111,6 +114,22 @@ func execDryRun(apps []types.Application) []types.Application {
 	return results
 }
 
+func fetch(req http.Request, ch chan<- string) {
+	resp, err := httpClient.Do(&req)
+	if err != nil {
+		ch <- fmt.Sprintf("%v", false)
+		return
+	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(resp.Body)
+
+	ch <- fmt.Sprintf("%v", resp.StatusCode == http.StatusOK)
+}
+
 func pingServers(apps []types.Application, secrets map[string]string) []types.Application {
 	var results []types.Application
 	for _, app := range apps {
@@ -130,9 +149,12 @@ func pingServers(apps []types.Application, secrets map[string]string) []types.Ap
 				}
 				req.Header.Set(authHeader, app.ApiKey)
 			}
-			res, err := httpClient.Do(req)
 
-			app.Status[server] = !(err != nil && res.StatusCode != http.StatusOK)
+			ch := make(chan string)
+			go fetch(*req, ch)
+			result := <-ch
+
+			app.Status[server], _ = strconv.ParseBool(result)
 
 		}
 		results = append(results, app)

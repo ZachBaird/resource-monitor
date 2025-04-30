@@ -16,7 +16,7 @@
             <span
                     id="last-updated-time"
                     hx-get="/timestamp"
-                    hx-trigger="every 30s, load"
+                    hx-trigger="every 120s, load"
                     hx-swap="innerHTML"
             >{{.LastUpdate.Format "Jan 02, 2006 15:04:05"}}</span>
         </p>
@@ -27,7 +27,7 @@
             class="dashboard"
             id="app-dashboard"
             hx-get="/dashboard"
-            hx-trigger="every 30s"
+            hx-trigger="every 120s"
             hx-swap="innerHTML"
     >
         {{template "dashboard.html" .}}

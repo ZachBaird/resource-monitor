@@ -6,11 +6,11 @@
     <ul class="servers-list">
         {{range $app.Servers}}
         <li class="server-item" data-url="{{$app.TestUrl}}">
-            <span class="server-name">{{.}}</span>
             <span class="status-text {{if index $app.Status .}}active-text{{else}}inactive-text{{end}}">
-                    <span class="status-indicator {{if index $app.Status .}}status-active{{else}}status-inactive{{end}}"></span>
-                    {{if index $app.Status .}}Active{{else}}Inactive{{end}}
-                </span>
+                <span class="status-indicator {{if index $app.Status .}}status-active{{else}}status-inactive{{end}}"></span>
+            </span>
+            <span class="server-name" data-full-name="{{.}}">{{.}}</span>
+
         </li>
         {{end}}
     </ul>

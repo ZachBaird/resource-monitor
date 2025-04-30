@@ -91,6 +91,8 @@ h1 {
 
 .server-name {
     font-weight: 500;
+    overflow: hidden;
+    text-overflow: fade;
 }
 
 .status-indicator {

@@ -24,3 +24,13 @@ func GetSecretConfig(a string) string {
 	env := os.Getenv(fmt.Sprintf("%s_SECRET", a))
 	return env
 }
+
+func GetIntervalConfig() int {
+	_ = godotenv.Load()
+	env := os.Getenv("REQ_INTERVAL")
+	interval, err := strconv.Atoi(env)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return interval
+}
