@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/TwiN/go-color"
 	"html/template"
 	"io"
 	"log"
@@ -50,7 +51,7 @@ func main() {
 	status.Apps = apps
 	interval := config.GetIntervalConfig()
 
-	fmt.Println("Starting monitor...\n\n")
+	fmt.Println("Starting monitor...")
 
 	startStatusChecker(apps, time.Duration(interval)*time.Minute)
 
@@ -60,25 +61,25 @@ func main() {
 	http.HandleFunc("/timestamp", handleTimestamp)
 	http.HandleFunc("/style.css", handleCSS)
 
+	fmt.Println("\nServer is listening on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
-	fmt.Println("Server is listening on port 8080")
 }
 
-func handleIndex(w http.ResponseWriter, r *http.Request) {
+func handleIndex(w http.ResponseWriter, _ *http.Request) {
 	status.Mu.RLock()
 	defer status.Mu.RUnlock()
 
 	utils.ServeTemplateFile("index.html", w, status, templates)
 }
 
-func handleDashboard(w http.ResponseWriter, r *http.Request) {
+func handleDashboard(w http.ResponseWriter, _ *http.Request) {
 	status.Mu.RLock()
 	defer status.Mu.RUnlock()
 
 	utils.ServeTemplateFile("dashboard.html", w, status, templates)
 }
 
-func handleTimestamp(w http.ResponseWriter, r *http.Request) {
+func handleTimestamp(w http.ResponseWriter, _ *http.Request) {
 	status.Mu.RLock()
 	defer status.Mu.RUnlock()
 
@@ -124,7 +125,7 @@ func fetch(req http.Request, ch chan<- string) {
 	resp, err := httpClient.Do(&req)
 	if err != nil {
 		ch <- fmt.Sprintf("%v", false)
-		_ = fmt.Errorf(err.Error())
+		fmt.Println(color.Ize(color.Red, fmt.Sprintf("Error making request: %v", err.Error())))
 		return
 	}
 	defer func(Body io.ReadCloser) {
@@ -134,11 +135,17 @@ func fetch(req http.Request, ch chan<- string) {
 		}
 	}(resp.Body)
 
-	fmt.Println(fmt.Sprintf("Result of ping on %v is %v\n", req.URL, resp.StatusCode))
+	result := ""
+	if resp.StatusCode == http.StatusOK {
+		result = color.Ize(color.Green, fmt.Sprintf("Successful ping on %s", req.URL))
+	} else {
+		result = color.Ize(color.Red, fmt.Sprintf("Ping result on %s is %v", req.URL, resp.StatusCode))
+	}
+	fmt.Println(result)
 	ch <- fmt.Sprintf("%v", resp.StatusCode == http.StatusOK)
 }
 
-func pingServers(apps []types.Application, secrets map[string]string) []types.Application {
+func pingServers(apps []types.Application, _ map[string]string) []types.Application {
 	var results []types.Application
 	for _, app := range apps {
 		app.Status = make(map[string]bool)
@@ -181,8 +188,10 @@ func startStatusChecker(apps []types.Application, interval time.Duration) {
 	}
 	go func() {
 		for {
+			fmt.Println("\n\nPreparing requests...")
 			updateLock.Lock()
 			status.Mu.Lock()
+
 			if isDryRun {
 				status.Apps = execDryRun(apps)
 			} else {
@@ -191,7 +200,6 @@ func startStatusChecker(apps []types.Application, interval time.Duration) {
 
 			status.LastUpdate = time.Now()
 			status.Mu.Unlock()
-
 			updateLock.Unlock()
 
 			time.Sleep(interval)
